@@ -701,12 +701,12 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
 if paciente_nombre:
    df_historial = obtener_historial_paciente(paciente_id)
 
-        if not df_historial.empty:
-            prueba_filtro = st.selectbox(
-            "Filtrar historial por prueba",
-            options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],
-            index=0,
-            key="filtro_historial_prueba"
+   if not df_historial.empty:
+       prueba_filtro = st.selectbox(
+           "Filtrar historial por prueba",
+           options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],
+           index=0,
+           key="filtro_historial_prueba"
         )
 
         if prueba_filtro == "Todas":
@@ -859,6 +859,7 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 
 

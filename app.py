@@ -670,9 +670,9 @@ if referencia_edad != "-":
 
 st.write(f"**Interpretación clínica:** {interpretacion_clinica(clasificacion)}")
 
-# =========================================================
+# ==========================================
 # GUARDADO
-# =========================================================
+# ==========================================
 if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
     if not paciente_nombre:
         st.warning("Seleccioná un paciente antes de guardar.")
@@ -680,8 +680,8 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
         st.warning("No se pudo calcular el percentil.")
     else:
         try:
-                guardar_evaluacion(
-                paciente_id=paciente_id, 
+            guardar_evaluacion(
+                paciente_id=paciente_id,
                 paciente_nombre=paciente_nombre,
                 sexo=sexo,
                 edad=edad,
@@ -859,5 +859,6 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 

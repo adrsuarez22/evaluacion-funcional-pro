@@ -141,9 +141,10 @@ TABLA_SILLA = {
 # =========================================================
 # BASE DE DATOS
 # =========================================================
-def guardar_evaluacion(paciente_nombre, sexo, edad, prueba, valor_medido, percentil, clasificacion):
+def guardar_evaluacion(paciente_id, paciente_nombre, sexo, edad, prueba, valor_medido, percentil, clasificacion):
     payload = {
         "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "paciente_id": int(paciente_id) if paciente_id is not None else None,
         "paciente": str(paciente_nombre).strip(),
         "sexo": str(sexo).strip().lower(),
         "edad": int(edad),
@@ -153,7 +154,6 @@ def guardar_evaluacion(paciente_nombre, sexo, edad, prueba, valor_medido, percen
         "clasificacion": str(clasificacion).strip()
     }
     return supabase.table("evaluaciones").insert(payload).execute()
-
 
 def guardar_paciente(nombre, sexo):
     nombre_limpio = str(nombre).strip()
@@ -857,3 +857,4 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+

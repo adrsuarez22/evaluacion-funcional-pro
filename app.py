@@ -521,11 +521,12 @@ if not opciones_pacientes:
     st.stop()
 
 paciente_nombre = st.selectbox("Seleccionar paciente", opciones_pacientes, key="selector_paciente")
+paciente_id = next(p["id"] for p in pacientes if p["nombre"] == paciente_nombre)
 
 # =========================================================
 # FICHA
 # =========================================================
-ficha = obtener_ficha_paciente(paciente_nombre)
+ficha = obtener_ficha_paciente(paciente_id)
 
 st.markdown("### Ficha del paciente")
 
@@ -679,7 +680,8 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
         st.warning("No se pudo calcular el percentil.")
     else:
         try:
-            guardar_evaluacion(
+                guardar_evaluacion(
+                paciente_id=paciente_id, 
                 paciente_nombre=paciente_nombre,
                 sexo=sexo,
                 edad=edad,
@@ -697,7 +699,7 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
 # HISTORIAL Y GRAFICOS
 # =========================================================
 if paciente_nombre:
-    df_historial = obtener_historial_paciente(paciente_nombre)
+   df_historial = obtener_historial_paciente(paciente_id)
 
     if not df_historial.empty:
         prueba_filtro = st.selectbox(
@@ -857,4 +859,5 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 

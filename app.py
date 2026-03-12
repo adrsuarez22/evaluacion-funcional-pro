@@ -711,7 +711,7 @@ if paciente_nombre:
 
        if prueba_filtro == "Todas":
             df_historial_filtrado = df_historial.copy()
-        else:
+       else:
             df_historial_filtrado = df_historial[
                 df_historial["prueba"].astype(str).str.strip() == prueba_filtro
             ].copy()
@@ -859,6 +859,7 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 
 

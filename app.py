@@ -709,7 +709,7 @@ if paciente_nombre:
            key="filtro_historial_prueba"
        )
 
-        if prueba_filtro == "Todas":
+       if prueba_filtro == "Todas":
             df_historial_filtrado = df_historial.copy()
         else:
             df_historial_filtrado = df_historial[
@@ -859,6 +859,7 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 
 

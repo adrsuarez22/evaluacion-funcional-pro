@@ -707,7 +707,7 @@ if paciente_nombre:
            options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],
            index=0,
            key="filtro_historial_prueba"
-        )
+       )
 
         if prueba_filtro == "Todas":
             df_historial_filtrado = df_historial.copy()
@@ -859,6 +859,7 @@ if paciente_nombre:
     else:
         st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 
 

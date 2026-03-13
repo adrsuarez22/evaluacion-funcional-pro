@@ -701,17 +701,17 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
 if paciente_nombre:
    df_historial = obtener_historial_paciente(paciente_id)
 
-   if not df_historial.empty:
-       prueba_filtro = st.selectbox(
-           "Filtrar historial por prueba",
-           options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],
-           index=0,
-           key="filtro_historial_prueba"
-       )
+      if not df_historial.empty:
+        prueba_filtro = st.selectbox(
+            "Filtrar historial por prueba",
+            options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],
+            index=0,
+            key="filtro_historial_prueba"
+        )
 
-       if prueba_filtro == "Todas":
+        if prueba_filtro == "Todas":
             df_historial_filtrado = df_historial.copy()
-       else:
+        else:
             df_historial_filtrado = df_historial[
                 df_historial["prueba"].astype(str).str.strip() == prueba_filtro
             ].copy()
@@ -741,38 +741,38 @@ if paciente_nombre:
         col_titulo, col_csv, col_pdf = st.columns([3, 1, 1])
 
         with col_titulo:
-            st.markdown("### Historial del paciente")
+            st.markdown("## Historial del paciente")
 
         with col_csv:
             st.download_button(
-                label="CSV",
+                "CSV",
                 data=csv_historial,
                 file_name=f"historial_{paciente_nombre.replace(' ', '_')}.csv",
                 mime="text/csv",
-                key="btn_descargar_csv"
+                key="descargar_csv_historial"
             )
 
         with col_pdf:
             st.download_button(
-                label="PDF",
+                "PDF",
                 data=pdf_buffer,
                 file_name=f"historial_{paciente_nombre.replace(' ', '_')}.pdf",
                 mime="application/pdf",
-                key="btn_descargar_pdf"
+                key="descargar_pdf_historial"
             )
 
-        st.markdown("**Fecha | Prueba | Valor | Percentil | Clasificación | Eliminar**")
+        st.write("Fecha | Prueba | Valor | Percentil | Clasificación | Eliminar")
 
         for _, row in df_historial_mostrar.iterrows():
-            col1, col2, col3, col4, col5, col6 = st.columns([1, 2, 1, 1, 1, 0.5])
+            c1, c2, c3, c4, c5, c6 = st.columns([1.2, 2.2, 1, 1, 1.4, 0.8])
 
-            col1.write(row.get("fecha", ""))
-            col2.write(row.get("prueba", ""))
-            col3.write(row.get("valor_medido", ""))
-            col4.write(row.get("percentil", ""))
-            col5.write(row.get("clasificacion", ""))
+            c1.write(row["fecha"])
+            c2.write(row["prueba"])
+            c3.write(row["valor_medido"])
+            c4.write(row["percentil"])
+            c5.write(row["clasificacion"])
 
-            if col6.button("🗑", key=f"del_{row['id']}"):
+            if c6.button("🗑", key=f"eliminar_{row['id']}"):
                 try:
                     eliminar_evaluacion(row["id"])
                     st.success("Evaluación eliminada.")
@@ -780,85 +780,9 @@ if paciente_nombre:
                 except Exception as e:
                     st.error(f"Error al eliminar: {e}")
 
-        if {"fecha", "percentil", "prueba"}.issubset(df_historial.columns):
-            df_graf_base = df_historial.copy()
-            df_graf_base["fecha"] = pd.to_datetime(df_graf_base["fecha"], errors="coerce").dt.date
-            df_graf_base["percentil"] = pd.to_numeric(df_graf_base["percentil"], errors="coerce")
-            df_graf_base["prueba"] = df_graf_base["prueba"].astype(str).str.strip()
-            df_graf_base = df_graf_base.dropna(subset=["fecha", "percentil", "prueba"])
-
-            pruebas_orden = [
-                "Caminata 6 minutos",
-                "Prensión manual",
-                "Levantarse de la silla"
-            ]
-
-            if prueba_filtro != "Todas":
-                pruebas_orden = [prueba_filtro]
-
-            for prueba_graf in pruebas_orden:
-                df_prueba = df_graf_base[df_graf_base["prueba"] == prueba_graf].copy()
-
-                if not df_prueba.empty:
-                    df_prueba = (
-                        df_prueba.groupby("fecha", as_index=False)["percentil"]
-                        .mean()
-                        .sort_values("fecha")
-                    )
-
-                    df_prueba["Etiqueta"] = df_prueba["percentil"].apply(lambda x: f"P{round(x, 1)}")
-                    ultimo = df_prueba["percentil"].iloc[-1]
-
-                    if len(df_prueba) >= 2:
-                        anterior = df_prueba["percentil"].iloc[-2]
-                        diferencia = round(ultimo - anterior, 1)
-                        texto_cambio = f"{diferencia:+.1f}"
-                    else:
-                        diferencia = None
-                        texto_cambio = "N/D"
-
-                    st.markdown(f"### Evolución del percentil - {prueba_graf}")
-                    st.caption(
-                        f"Percentil actual: P{round(ultimo, 1)} | "
-                        f"Cambio respecto de la evaluación anterior: {texto_cambio}"
-                    )
-
-                    linea = alt.Chart(df_prueba).mark_line(point=False).encode(
-                        x=alt.X(
-                            "yearmonthdate(fecha):T",
-                            title="Fecha",
-                            axis=alt.Axis(format="%d-%m-%Y")
-                        ),
-                        y=alt.Y("percentil:Q", title="Percentil")
-                    )
-
-                    puntos = alt.Chart(df_prueba).mark_circle(size=90).encode(
-                        x=alt.X("yearmonthdate(fecha):T"),
-                        y=alt.Y("percentil:Q")
-                    )
-
-                    etiquetas = alt.Chart(df_prueba).mark_text(
-                        dy=-12,
-                        fontSize=12
-                    ).encode(
-                        x=alt.X("yearmonthdate(fecha):T"),
-                        y=alt.Y("percentil:Q"),
-                        text="Etiqueta:N"
-                    )
-
-                    grafico = (linea + puntos + etiquetas).properties(height=260)
-                    st.altair_chart(grafico, use_container_width=True)
-
-                    if diferencia is not None:
-                        if diferencia > 0:
-                            st.success(f"↑ Mejora de {diferencia} percentiles desde la evaluación anterior")
-                        elif diferencia < 0:
-                            st.warning(f"↓ Disminución de {abs(diferencia)} percentiles desde la evaluación anterior")
-                        else:
-                            st.info("Sin cambios respecto a la evaluación anterior")
     else:
-        st.markdown("### Historial del paciente")
         st.info("Todavía no hay evaluaciones guardadas para este paciente.")
+
 
 
 

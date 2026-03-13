@@ -695,13 +695,13 @@ if st.button("Guardar evaluación", key="btn_guardar_evaluacion"):
         except Exception as e:
             st.error(f"Error al guardar: {e}")
 
-# =========================================================
+# ==========================================
 # HISTORIAL Y GRAFICOS
-# =========================================================
+# ==========================================
 if paciente_nombre:
-   df_historial = obtener_historial_paciente(paciente_id)
+    df_historial = obtener_historial_paciente(paciente_nombre)
 
-   if not df_historial.empty:
+    if not df_historial.empty:
         prueba_filtro = st.selectbox(
             "Filtrar historial por prueba",
             options=["Todas", "Caminata 6 minutos", "Prensión manual", "Levantarse de la silla"],

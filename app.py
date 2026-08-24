@@ -4,6 +4,9 @@ import altair as alt
 from datetime import datetime, date
 from supabase import create_client, Client
 from io import BytesIO
+from pathlib import Path
+
+APP_DIR = Path(__file__).resolve().parent
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -1888,20 +1891,25 @@ def _tabla_pdf_desde_df(df, columnas, titulos, anchos_cm, styles):
     return tabla
     
 def header_pdf(canvas, doc):
-    logo_path = "LogoPetratti.jpeg"
+    logo_path = APP_DIR / "LogoPetratti.jpeg"
 
+    if not logo_path.exists():
+        return
+
+    canvas.saveState()
     try:
         canvas.drawImage(
-            logo_path,
+            str(logo_path),
             doc.pagesize[0] - 7 * cm,
             doc.pagesize[1] - 3.2 * cm,
             width=6 * cm,
             height=2.4 * cm,
             preserveAspectRatio=True,
+            anchor="c",
             mask="auto"
         )
-    except Exception:
-        pass
+    finally:
+        canvas.restoreState()
 
 def generar_pdf_paciente(ficha, df_peso, df_inbody, df_eval, df_medicacion):
     buffer = BytesIO()

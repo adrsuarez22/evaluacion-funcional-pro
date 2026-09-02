@@ -164,6 +164,17 @@ def verificar_acceso():
 
 verificar_acceso()
 
+
+# =========================================================
+# SESION
+# =========================================================
+
+with st.sidebar:
+    st.markdown("### Sesión")
+    if st.button("Salir", key="btn_salir", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {

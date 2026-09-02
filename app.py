@@ -139,6 +139,31 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# =========================================================
+# CONTROL DE ACCESO
+# =========================================================
+
+def verificar_acceso():
+    if st.session_state.get("acceso_ok", False):
+        return
+
+    st.title("Acceso")
+
+    clave = st.text_input("Contraseña", type="password")
+
+    if st.button("Ingresar"):
+        if clave == st.secrets["APP_PASSWORD"]:
+            st.session_state["acceso_ok"] = True
+            st.rerun()
+        else:
+            st.error("Contraseña incorrecta")
+
+    st.stop()
+
+
+verificar_acceso()
+
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {

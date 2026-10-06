@@ -7,6 +7,14 @@ from io import BytesIO
 from pathlib import Path
 from functools import wraps
 
+from demo_data import (
+    DEMO_PACIENTES,
+    DEMO_PESO,
+    DEMO_EVALUACIONES,
+    DEMO_INBODY,
+    DEMO_MEDICACION,
+)
+
 APP_DIR = Path(__file__).resolve().parent
 
 from reportlab.lib import colors
@@ -197,22 +205,6 @@ def bloquear_en_demo(func):
     return wrapper
 
 
-def anonimizar_pacientes(lista):
-    if not lista:
-        return lista
-
-    ids_ordenados = sorted({p.get("id") for p in lista if p.get("id") is not None})
-    mapa = {pid: f"Paciente {i:02d}" for i, pid in enumerate(ids_ordenados, start=1)}
-
-    anonimos = []
-    for p in lista:
-        copia = dict(p)
-        copia["nombre"] = mapa.get(p.get("id"), "Paciente")
-        anonimos.append(copia)
-
-    return anonimos
-
-
 with st.sidebar:
     st.markdown("### Sesión")
 
@@ -225,7 +217,7 @@ with st.sidebar:
 
 if es_modo_demo():
     st.warning(
-        "MODO DEMO - Nombres anonimizados y solo lectura: no se guarda ni se elimina nada."
+        "MODO DEMO - Pacientes de ejemplo y solo lectura: no se guarda ni se elimina nada."
     )
 
 st.markdown("""
@@ -406,7 +398,7 @@ def cargar_datos_paciente_en_widgets(paciente_actual, df_peso):
 # LECTURAS CACHEADAS
 # =========================================================
 @st.cache_data(ttl=300)
-def obtener_pacientes():
+def _obtener_pacientes_real():
     try:
         resp = (
             supabase
@@ -421,7 +413,7 @@ def obtener_pacientes():
         return []
 
 
-def obtener_paciente_por_nombre(nombre):
+def _obtener_paciente_por_nombre_real(nombre):
     try:
         nombre_limpio = str(nombre).strip()
 
@@ -447,7 +439,7 @@ def obtener_paciente_por_nombre(nombre):
 
 
 @st.cache_data(ttl=300)
-def obtener_evaluaciones(paciente_id):
+def _obtener_evaluaciones_real(paciente_id):
     try:
         resp = (
             supabase
@@ -463,7 +455,7 @@ def obtener_evaluaciones(paciente_id):
 
 
 @st.cache_data(ttl=300)
-def obtener_historial_paciente(paciente_id):
+def _obtener_historial_paciente_real(paciente_id):
     try:
         respuesta = (
             supabase.table("evaluaciones")
@@ -481,7 +473,7 @@ def obtener_historial_paciente(paciente_id):
 
 
 @st.cache_data(ttl=300)
-def obtener_historial_peso(paciente_id):
+def _obtener_historial_peso_real(paciente_id):
     try:
         respuesta = (
             supabase.table("seguimiento_peso")
@@ -501,7 +493,7 @@ def obtener_historial_peso(paciente_id):
 
 
 @st.cache_data(ttl=300)
-def obtener_historial_medicacion(paciente_id):
+def _obtener_historial_medicacion_real(paciente_id):
     try:
         respuesta = (
             supabase.table("medicacion_evolucion")
@@ -539,7 +531,7 @@ def obtener_historial_medicacion(paciente_id):
 
 
 @st.cache_data(ttl=300)
-def obtener_historial_inbody(paciente_id):
+def _obtener_historial_inbody_real(paciente_id):
     try:
         respuesta = (
             supabase.table("inbody_registros")
@@ -657,6 +649,216 @@ TABLA_SILLA = {
         "+84": {10: 6, 20: 8, 30: 9, 40: 11, 50: 12, 60: 14, 70: 14, 80: 16, 90: 17, 100: 18},
     }
 }
+
+# =========================================================
+# LECTURAS EN MODO DEMO
+# =========================================================
+# Los pacientes de demostración viven en demo_data.py, no en Supabase. Acá se
+# arman las mismas estructuras que devuelven las lecturas reales, calculando
+# los derivados (IMC, ICC, ICA, percentiles) con las funciones de la app para
+# que la demo sea coherente con las tablas de referencia.
+#
+# El ruteo se hace en un wrapper y no adentro de las funciones cacheadas: el
+# cache de @st.cache_data es compartido entre sesiones y mezclaría los datos
+# de demostración con los reales.
+
+def _demo_ficha(paciente_id):
+    for p in DEMO_PACIENTES:
+        if int(p["id"]) == int(paciente_id):
+            return p
+    return None
+
+
+def _demo_id_fila(paciente_id, indice):
+    return int(paciente_id) * 100 + indice
+
+
+def demo_pacientes():
+    return [dict(p) for p in DEMO_PACIENTES]
+
+
+def demo_paciente_por_nombre(nombre):
+    objetivo = str(nombre).strip().lower()
+
+    for p in DEMO_PACIENTES:
+        if str(p["nombre"]).strip().lower() == objetivo:
+            return dict(p)
+
+    return None
+
+
+def demo_evaluaciones(paciente_id):
+    ficha = _demo_ficha(paciente_id)
+
+    if ficha is None:
+        return []
+
+    sexo_tabla = "Mujer" if str(ficha["sexo"]).strip().lower() == "mujer" else "Hombre"
+    edad = calcular_edad_desde_fecha(ficha["fecha_nacimiento"])
+    altura_ref = obtener_altura_referencia_caminata(ficha["talla_m"])
+
+    filas = []
+
+    for i, r in enumerate(DEMO_EVALUACIONES.get(int(paciente_id), []), start=1):
+        percentil, clasificacion, _, _, _ = calcular_resultado(
+            r["prueba"],
+            sexo_tabla,
+            edad,
+            altura_ref,
+            r["valor_medido"]
+        )
+
+        filas.append({
+            "id": _demo_id_fila(paciente_id, i),
+            "paciente_id": int(paciente_id),
+            "paciente": ficha["nombre"],
+            "sexo": str(ficha["sexo"]).strip().lower(),
+            "edad": int(edad),
+            "fecha": r["fecha"],
+            "prueba": r["prueba"],
+            "valor_medido": float(r["valor_medido"]),
+            "percentil": round(float(percentil), 1) if percentil is not None else None,
+            "clasificacion": clasificacion
+        })
+
+    return filas
+
+
+def demo_historial_paciente(paciente_id):
+    filas = demo_evaluaciones(paciente_id)
+
+    if not filas:
+        return pd.DataFrame()
+
+    return pd.DataFrame(filas)
+
+
+def demo_historial_peso(paciente_id):
+    columnas = [
+        "id", "paciente_id", "fecha", "peso_kg", "imc",
+        "cintura_cm", "cadera_cm", "icc", "ica", "created_at"
+    ]
+    ficha = _demo_ficha(paciente_id)
+
+    if ficha is None:
+        return pd.DataFrame(columns=columnas)
+
+    talla_m = float(ficha["talla_m"])
+    filas = []
+
+    for i, r in enumerate(DEMO_PESO.get(int(paciente_id), []), start=1):
+        peso_kg = float(r["peso_kg"])
+
+        filas.append({
+            "id": _demo_id_fila(paciente_id, i),
+            "paciente_id": int(paciente_id),
+            "fecha": r["fecha"],
+            "peso_kg": peso_kg,
+            "imc": round(peso_kg / (talla_m ** 2), 2),
+            "cintura_cm": float(r["cintura_cm"]),
+            "cadera_cm": float(r["cadera_cm"]),
+            "icc": calcular_icc(r["cintura_cm"], r["cadera_cm"]),
+            "ica": calcular_ica(r["cintura_cm"], talla_m),
+            "created_at": f"{r['fecha']}T09:00:00"
+        })
+
+    return pd.DataFrame(filas, columns=columnas)
+
+
+def demo_historial_inbody(paciente_id):
+    columnas = [
+        "id", "paciente_id", "fecha", "peso_kg", "imc", "grasa_corporal_pct",
+        "masa_muscular_kg", "agua_corporal_pct", "grasa_visceral",
+        "metabolismo_basal", "observaciones"
+    ]
+    ficha = _demo_ficha(paciente_id)
+
+    if ficha is None:
+        return pd.DataFrame(columns=columnas)
+
+    talla_m = float(ficha["talla_m"])
+    filas = []
+
+    for i, r in enumerate(DEMO_INBODY.get(int(paciente_id), []), start=1):
+        fila = dict(r)
+        peso_kg = float(r["peso_kg"])
+        fila["id"] = _demo_id_fila(paciente_id, i)
+        fila["paciente_id"] = int(paciente_id)
+        fila["imc"] = round(peso_kg / (talla_m ** 2), 2)
+        filas.append(fila)
+
+    df = pd.DataFrame(filas, columns=columnas)
+
+    if df.empty:
+        return df
+
+    return df.sort_values("fecha", ascending=False).reset_index(drop=True)
+
+
+def demo_historial_medicacion(paciente_id):
+    columnas = [
+        "id", "paciente_id", "fecha_cambio", "droga", "dosis", "unidad",
+        "frecuencia", "via_administracion", "estado", "observaciones"
+    ]
+    filas = []
+
+    for i, r in enumerate(DEMO_MEDICACION.get(int(paciente_id), []), start=1):
+        fila = dict(r)
+        fila["id"] = _demo_id_fila(paciente_id, i)
+        fila["paciente_id"] = int(paciente_id)
+        filas.append(fila)
+
+    df = pd.DataFrame(filas, columns=columnas)
+
+    if df.empty:
+        return df
+
+    return df.sort_values("fecha_cambio", ascending=False).reset_index(drop=True)
+
+
+# Puertas de entrada: la app sigue llamando a estos nombres.
+
+def obtener_pacientes():
+    if es_modo_demo():
+        return demo_pacientes()
+    return _obtener_pacientes_real()
+
+
+def obtener_paciente_por_nombre(nombre):
+    if es_modo_demo():
+        return demo_paciente_por_nombre(nombre)
+    return _obtener_paciente_por_nombre_real(nombre)
+
+
+def obtener_evaluaciones(paciente_id):
+    if es_modo_demo():
+        return demo_evaluaciones(paciente_id)
+    return _obtener_evaluaciones_real(paciente_id)
+
+
+def obtener_historial_paciente(paciente_id):
+    if es_modo_demo():
+        return demo_historial_paciente(paciente_id)
+    return _obtener_historial_paciente_real(paciente_id)
+
+
+def obtener_historial_peso(paciente_id):
+    if es_modo_demo():
+        return demo_historial_peso(paciente_id)
+    return _obtener_historial_peso_real(paciente_id)
+
+
+def obtener_historial_medicacion(paciente_id):
+    if es_modo_demo():
+        return demo_historial_medicacion(paciente_id)
+    return _obtener_historial_medicacion_real(paciente_id)
+
+
+def obtener_historial_inbody(paciente_id):
+    if es_modo_demo():
+        return demo_historial_inbody(paciente_id)
+    return _obtener_historial_inbody_real(paciente_id)
+
 
 # =========================================================
 # BASE DE DATOS - ESCRITURAS
@@ -2705,9 +2907,6 @@ def generar_informe_integrado_paciente(ficha, df_peso, df_inbody, df_eval, df_me
 # UI
 # =========================================================
 pacientes = obtener_pacientes()
-
-if es_modo_demo():
-    pacientes = anonimizar_pacientes(pacientes)
 
 if not pacientes:
     st.warning("No hay pacientes cargados.")

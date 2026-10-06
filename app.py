@@ -5,6 +5,7 @@ from datetime import datetime, date
 from supabase import create_client, Client
 from io import BytesIO
 from pathlib import Path
+from functools import wraps
 
 APP_DIR = Path(__file__).resolve().parent
 
@@ -153,8 +154,16 @@ def verificar_acceso():
     clave = st.text_input("Contraseña", type="password")
 
     if st.button("Ingresar"):
-        if clave == st.secrets["APP_PASSWORD"]:
+        clave_app = st.secrets.get("APP_PASSWORD")
+        clave_demo = st.secrets.get("DEMO_PASSWORD")
+
+        if clave_app and clave == clave_app:
             st.session_state["acceso_ok"] = True
+            st.session_state["modo_demo"] = False
+            st.rerun()
+        elif clave_demo and clave == clave_demo:
+            st.session_state["acceso_ok"] = True
+            st.session_state["modo_demo"] = True
             st.rerun()
         else:
             st.error("Contraseña incorrecta")
@@ -169,11 +178,55 @@ verificar_acceso()
 # SESION
 # =========================================================
 
+def es_modo_demo():
+    return st.session_state.get("modo_demo", False)
+
+
+class ModoDemoError(Exception):
+    pass
+
+
+def bloquear_en_demo(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if es_modo_demo():
+            raise ModoDemoError(
+                "Modo demo: la app es de solo lectura, no se guardan cambios."
+            )
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def anonimizar_pacientes(lista):
+    if not lista:
+        return lista
+
+    ids_ordenados = sorted({p.get("id") for p in lista if p.get("id") is not None})
+    mapa = {pid: f"Paciente {i:02d}" for i, pid in enumerate(ids_ordenados, start=1)}
+
+    anonimos = []
+    for p in lista:
+        copia = dict(p)
+        copia["nombre"] = mapa.get(p.get("id"), "Paciente")
+        anonimos.append(copia)
+
+    return anonimos
+
+
 with st.sidebar:
     st.markdown("### Sesión")
+
+    if es_modo_demo():
+        st.info("Modo demo\n\nSolo lectura")
+
     if st.button("Salir", key="btn_salir", use_container_width=True):
         st.session_state.clear()
         st.rerun()
+
+if es_modo_demo():
+    st.warning(
+        "MODO DEMO - Nombres anonimizados y solo lectura: no se guarda ni se elimina nada."
+    )
 
 st.markdown("""
 <style>
@@ -612,6 +665,7 @@ def limpiar_cache():
     st.cache_data.clear()
 
 
+@bloquear_en_demo
 def guardar_evaluacion(paciente_id, paciente_nombre, sexo, edad, prueba, valor_medido, percentil, clasificacion):
     if paciente_id is None:
         raise ValueError("No se encontró el id del paciente.")
@@ -632,6 +686,7 @@ def guardar_evaluacion(paciente_id, paciente_nombre, sexo, edad, prueba, valor_m
     return resp
 
 
+@bloquear_en_demo
 def guardar_paciente(nombre, sexo, fecha_nacimiento, talla_m):
     nombre_limpio = str(nombre).strip()
     sexo_limpio = str(sexo).strip().lower()
@@ -661,6 +716,7 @@ def guardar_paciente(nombre, sexo, fecha_nacimiento, talla_m):
     return resp
 
 
+@bloquear_en_demo
 def actualizar_paciente(paciente_id, nombre, sexo, fecha_nacimiento, talla_m):
     nombre_limpio = str(nombre).strip()
     sexo_limpio = str(sexo).strip().lower()
@@ -696,12 +752,14 @@ def actualizar_paciente(paciente_id, nombre, sexo, fecha_nacimiento, talla_m):
     return resp
 
 
+@bloquear_en_demo
 def eliminar_paciente(paciente_id):
     resp_del = supabase.table("pacientes").delete().eq("id", paciente_id).execute()
     limpiar_cache()
     return resp_del
 
 
+@bloquear_en_demo
 def guardar_peso(paciente_id, fecha_medicion, peso_kg, talla_m, cintura_cm=None, cadera_cm=None):
     if paciente_id is None:
         raise ValueError("No se encontró el id del paciente.")
@@ -757,6 +815,7 @@ def guardar_peso(paciente_id, fecha_medicion, peso_kg, talla_m, cintura_cm=None,
     return resp
 
 
+@bloquear_en_demo
 def guardar_medicacion(
     paciente_id,
     fecha_cambio,
@@ -791,6 +850,7 @@ def guardar_medicacion(
     return resp
 
 
+@bloquear_en_demo
 def guardar_inbody(
     paciente_id,
     fecha_estudio,
@@ -826,18 +886,21 @@ def guardar_inbody(
     return resp
 
 
+@bloquear_en_demo
 def eliminar_evaluacion(id_registro):
     resp = supabase.table("evaluaciones").delete().eq("id", id_registro).execute()
     limpiar_cache()
     return resp
 
 
+@bloquear_en_demo
 def eliminar_registro_peso(id_registro):
     resp = supabase.table("seguimiento_peso").delete().eq("id", id_registro).execute()
     limpiar_cache()
     return resp
 
 
+@bloquear_en_demo
 def eliminar_registro_corporal(id_registro):
     resp = supabase.table("inbody_registros").delete().eq("id", id_registro).execute()
     limpiar_cache()
@@ -2642,6 +2705,9 @@ def generar_informe_integrado_paciente(ficha, df_peso, df_inbody, df_eval, df_me
 # UI
 # =========================================================
 pacientes = obtener_pacientes()
+
+if es_modo_demo():
+    pacientes = anonimizar_pacientes(pacientes)
 
 if not pacientes:
     st.warning("No hay pacientes cargados.")

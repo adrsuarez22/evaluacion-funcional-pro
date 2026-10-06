@@ -266,6 +266,35 @@ st.markdown("""
     padding: 12px 14px;
     margin-bottom: 14px;
 }
+
+/* ---------- Telefonos ----------
+   Las tablas de historial tienen hasta ocho columnas. Streamlit las apila en
+   pantallas angostas y cada registro queda como una lista de numeros sueltos,
+   sin encabezado que diga que es cada uno. Acá se mantienen en fila y el
+   contenedor scrollea en horizontal, con lo que el encabezado y los datos se
+   desplazan juntos. */
+@media (max-width: 640px) {
+    [class*="st-key-tabla_historial_"] {
+        overflow-x: auto;
+        padding-bottom: 6px;
+    }
+
+    [class*="st-key-tabla_historial_"] [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap;
+        min-width: 620px;
+        gap: 0.4rem;
+    }
+
+    [class*="st-key-tabla_historial_"] [data-testid="stColumn"] {
+        min-width: 0;
+    }
+
+    /* El titulo entra en una sola linea en vez de partirse en dos. */
+    h1 {
+        font-size: 1.9rem !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3411,34 +3440,43 @@ if not df_peso_hist.empty:
     df_peso_hist["fecha"] = pd.to_datetime(df_peso_hist["fecha"], errors="coerce")
     df_peso_hist = df_peso_hist.dropna(subset=["fecha"]).sort_values("fecha", ascending=False)
 
-    st.markdown("**Fecha | Peso | IMC | Cintura | Cadera | ICC | ICA | Eliminar**")
+    with st.container(key="tabla_historial_peso"):
+        h1, h2, h3, h4, h5, h6, h7, h8 = st.columns([1.2, 0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.5])
+        h1.markdown("**Fecha**")
+        h2.markdown("**Peso**")
+        h3.markdown("**IMC**")
+        h4.markdown("**Cintura**")
+        h5.markdown("**Cadera**")
+        h6.markdown("**ICC**")
+        h7.markdown("**ICA**")
 
-    for _, row in df_peso_hist.iterrows():
-        c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1.2, 0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.5])
 
-        fecha_txt = row["fecha"].strftime("%Y-%m-%d") if pd.notna(row.get("fecha")) else ""
-        peso_txt = f"{float(row['peso_kg']):.1f}" if pd.notna(row.get("peso_kg")) else ""
-        imc_txt = f"{float(row['imc']):.2f}" if pd.notna(row.get("imc")) else ""
-        cintura_txt = f"{float(row['cintura_cm']):.1f}" if pd.notna(row.get("cintura_cm")) else ""
-        cadera_txt = f"{float(row['cadera_cm']):.1f}" if pd.notna(row.get("cadera_cm")) else ""
-        icc_txt = f"{float(row['icc']):.2f}" if pd.notna(row.get("icc")) else ""
-        ica_txt = f"{float(row['ica']):.2f}" if pd.notna(row.get("ica")) else ""
+        for _, row in df_peso_hist.iterrows():
+            c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1.2, 0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.5])
 
-        c1.write(fecha_txt)
-        c2.write(peso_txt)
-        c3.write(imc_txt)
-        c4.write(cintura_txt)
-        c5.write(cadera_txt)
-        c6.write(icc_txt)
-        c7.write(ica_txt)
+            fecha_txt = row["fecha"].strftime("%Y-%m-%d") if pd.notna(row.get("fecha")) else ""
+            peso_txt = f"{float(row['peso_kg']):.1f}" if pd.notna(row.get("peso_kg")) else ""
+            imc_txt = f"{float(row['imc']):.2f}" if pd.notna(row.get("imc")) else ""
+            cintura_txt = f"{float(row['cintura_cm']):.1f}" if pd.notna(row.get("cintura_cm")) else ""
+            cadera_txt = f"{float(row['cadera_cm']):.1f}" if pd.notna(row.get("cadera_cm")) else ""
+            icc_txt = f"{float(row['icc']):.2f}" if pd.notna(row.get("icc")) else ""
+            ica_txt = f"{float(row['ica']):.2f}" if pd.notna(row.get("ica")) else ""
 
-        if c8.button("🗑", key=f"del_peso_{row['id']}"):
-            try:
-                eliminar_registro_peso(row["id"])
-                st.success("Registro de peso eliminado.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error al eliminar registro de peso: {e}")
+            c1.write(fecha_txt)
+            c2.write(peso_txt)
+            c3.write(imc_txt)
+            c4.write(cintura_txt)
+            c5.write(cadera_txt)
+            c6.write(icc_txt)
+            c7.write(ica_txt)
+
+            if c8.button("🗑", key=f"del_peso_{row['id']}"):
+                try:
+                    eliminar_registro_peso(row["id"])
+                    st.success("Registro de peso eliminado.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al eliminar registro de peso: {e}")
 else:
     st.info("Sin historial de peso / IMC.")
 
@@ -3483,12 +3521,12 @@ if not df_peso.empty:
                     alt.Tooltip("valor:Q", title="Valor", format=".2f")
                 ]
             )
-            .properties(height=350, width=700)
+            .properties(height=350)
         )
 
         col_g1, col_g2, col_g3 = st.columns([1,6,1])
         with col_g2:
-            st.altair_chart(grafico_doble, use_container_width=False)
+            st.altair_chart(grafico_doble, use_container_width=True)
     else:
         st.info("Sin datos válidos de peso / IMC.")
 else:
@@ -3684,24 +3722,31 @@ if not df_historial.empty:
 
     df_historial_mostrar = df_historial_mostrar.sort_values(by="fecha", ascending=False)
 
-    st.markdown("**Fecha | Prueba | Valor | Percentil | Clasificación | Eliminar**")
+    with st.container(key="tabla_historial_funcional"):
+        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 1, 1, 1, 0.5])
+        h1.markdown("**Fecha**")
+        h2.markdown("**Prueba**")
+        h3.markdown("**Valor**")
+        h4.markdown("**Percentil**")
+        h5.markdown("**Clasificación**")
 
-    for _, row in df_historial_mostrar.iterrows():
-        c1, c2, c3, c4, c5, c6 = st.columns([1, 2, 1, 1, 1, 0.5])
 
-        c1.write(row.get("fecha", ""))
-        c2.write(row.get("prueba", ""))
-        c3.write(row.get("valor_medido", ""))
-        c4.write(row.get("percentil", ""))
-        c5.write(row.get("clasificacion", ""))
+        for _, row in df_historial_mostrar.iterrows():
+            c1, c2, c3, c4, c5, c6 = st.columns([1, 2, 1, 1, 1, 0.5])
 
-        if c6.button("🗑", key=f"del_{row['id']}"):
-            try:
-                eliminar_evaluacion(row["id"])
-                st.success("Evaluación eliminada.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error al eliminar: {e}")
+            c1.write(row.get("fecha", ""))
+            c2.write(row.get("prueba", ""))
+            c3.write(row.get("valor_medido", ""))
+            c4.write(row.get("percentil", ""))
+            c5.write(row.get("clasificacion", ""))
+
+            if c6.button("🗑", key=f"del_{row['id']}"):
+                try:
+                    eliminar_evaluacion(row["id"])
+                    st.success("Evaluación eliminada.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al eliminar: {e}")
 
     st.markdown("#### Evolución del percentil funcional")
 
@@ -3955,32 +4000,40 @@ if not df_inbody.empty:
     df_inbody["fecha"] = pd.to_datetime(df_inbody["fecha"], errors="coerce")
     df_inbody = df_inbody.dropna(subset=["fecha"]).sort_values("fecha", ascending=False)
 
-    st.markdown("**Fecha | Peso | IMC | % Grasa | Músculo | Diagnóstico | Eliminar**")
+    with st.container(key="tabla_historial_corporal"):
+        h1, h2, h3, h4, h5, h6, h7 = st.columns([1.2, 1, 0.8, 1, 1, 1.8, 0.5])
+        h1.markdown("**Fecha**")
+        h2.markdown("**Peso**")
+        h3.markdown("**IMC**")
+        h4.markdown("**% Grasa**")
+        h5.markdown("**Músculo**")
+        h6.markdown("**Diagnóstico**")
 
-    for _, row in df_inbody.iterrows():
-        c1, c2, c3, c4, c5, c6, c7 = st.columns([1.2, 1, 0.8, 1, 1, 1.8, 0.5])
 
-        fecha_txt = row["fecha"].strftime("%Y-%m-%d") if pd.notna(row.get("fecha")) else ""
-        peso_txt = f"{float(row['peso_kg']):.1f}" if pd.notna(row.get("peso_kg")) else ""
-        imc_txt = f"{float(row['imc']):.2f}" if pd.notna(row.get("imc")) else ""
-        grasa_txt = f"{float(row['grasa_corporal_pct']):.1f}" if pd.notna(row.get("grasa_corporal_pct")) else ""
-        musculo_txt = f"{float(row['masa_muscular_kg']):.1f}" if pd.notna(row.get("masa_muscular_kg")) else ""
-        diagnostico_txt = str(row.get("diagnostico_corporal", ""))
+        for _, row in df_inbody.iterrows():
+            c1, c2, c3, c4, c5, c6, c7 = st.columns([1.2, 1, 0.8, 1, 1, 1.8, 0.5])
 
-        c1.write(fecha_txt)
-        c2.write(peso_txt)
-        c3.write(imc_txt)
-        c4.write(grasa_txt)
-        c5.write(musculo_txt)
-        c6.write(diagnostico_txt)
+            fecha_txt = row["fecha"].strftime("%Y-%m-%d") if pd.notna(row.get("fecha")) else ""
+            peso_txt = f"{float(row['peso_kg']):.1f}" if pd.notna(row.get("peso_kg")) else ""
+            imc_txt = f"{float(row['imc']):.2f}" if pd.notna(row.get("imc")) else ""
+            grasa_txt = f"{float(row['grasa_corporal_pct']):.1f}" if pd.notna(row.get("grasa_corporal_pct")) else ""
+            musculo_txt = f"{float(row['masa_muscular_kg']):.1f}" if pd.notna(row.get("masa_muscular_kg")) else ""
+            diagnostico_txt = str(row.get("diagnostico_corporal", ""))
 
-        if c7.button("🗑", key=f"del_inbody_{row['id']}"):
-            try:
-                eliminar_registro_corporal(row["id"])
-                st.success("Registro corporal eliminado.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error al eliminar registro corporal: {e}")
+            c1.write(fecha_txt)
+            c2.write(peso_txt)
+            c3.write(imc_txt)
+            c4.write(grasa_txt)
+            c5.write(musculo_txt)
+            c6.write(diagnostico_txt)
+
+            if c7.button("🗑", key=f"del_inbody_{row['id']}"):
+                try:
+                    eliminar_registro_corporal(row["id"])
+                    st.success("Registro corporal eliminado.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al eliminar registro corporal: {e}")
 else:
     st.info("Sin historial corporal.")
 

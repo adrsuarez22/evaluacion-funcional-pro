@@ -142,9 +142,11 @@ def preparar_dataset_longitudinal(df_estadistico):
 # =========================================================
 # CONFIG
 # =========================================================
+ICONO_APP = APP_DIR / "IconoPetratti.png"
+
 st.set_page_config(
     page_title="Método Dra. Petratti",
-    page_icon="💪",
+    page_icon=str(ICONO_APP) if ICONO_APP.exists() else "💪",
     layout="wide"
 )
 

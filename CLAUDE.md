@@ -5,7 +5,7 @@ minutos, fuerza de prensión y levantarse de la silla con percentiles de estudio
 IMC, cintura y cadera, InBody, medicación, informes PDF y Excel, modo demo (`demo_data.py`). Versiones anteriores:
 `calculadora-funcional` y `calculadora-cristina`. Se trabaja en castellano rioplatense.
 
-**Mapa de todos los proyectos**: antes de trabajar, adjuntá `adrsuarez22/armd-plataforma` y leé `docs/proyectos.md` (plataforma, server, Wapp, Pagos, reclutamiento y Postulantes, contable, app de evaluación funcional, agente, sociedad y negocio: todos relacionados). Las sesiones no ven otras conversaciones: lo decidido y lo pendiente se anota en la ficha del proyecto en ese archivo, y un proyecto nuevo se agrega ahí.
+**Mapa de todos los proyectos**: antes de trabajar, adjuntá `adrsuarez22/armd-plataforma` y leé `docs/proyectos.md` (plataforma, server, Wapp, Pagos, reclutamiento y Postulantes, contable, app de evaluación funcional, agente, sociedad y negocio: todos relacionados). Las sesiones no ven otras conversaciones: **sin que Adrián lo pida**, cada vez que se decide algo, se termina una tarea o queda algo pendiente, actualizá la ficha del proyecto en ese archivo en el mismo trabajo, y agregá ahí un proyecto o una conversación nueva.
 
 ## Reglas
 - Tiene datos reales de pacientes en Supabase: nunca subirlos al repo ni mostrarlos; los secretos van en
